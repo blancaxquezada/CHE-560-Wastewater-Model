@@ -32,11 +32,19 @@ time_days = [0; cumsum(dur(:))];
 
 % If we exceed Tend_days, truncate and adjust last duration
 if time_days(end) > Tend_days
-    % Find how many steps fit
-    idx = find(time_days <= Tend_days, 1, 'last');
-    time_days = time_days(1:idx);
-    time_days(end) = Tend_days;  % Set last time to Tend_days
-    Nsteps = length(time_days) - 1;  % Update actual number of steps
+    % Find how many step start times fit (excluding initial 0)
+    idx = find(time_days(2:end) <= Tend_days, 1, 'last');  % idx is number of steps that fit
+    if isempty(idx) || idx == 0
+        % No steps fit, just use initial and final
+        time_days = [0; Tend_days];
+        Nsteps = 0;
+        dur = [];
+    else
+        % Keep idx steps, add Tend_days at end
+        time_days = [0; time_days(2:idx+1); Tend_days];  % [0, step1, step2, ..., step_idx, Tend_days]
+        Nsteps = idx;
+        dur = dur(1:Nsteps);
+    end
 else
     % Add final time point
     time_days = [time_days; Tend_days];
@@ -44,20 +52,29 @@ end
 
 %% --- Generate Random Step Heights ---
 % Random deviations from nominal (uniform distribution)
-dK = kla5_max_dev * (2*rand(1, Nsteps) - 1);  % [-kla5_max_dev, +kla5_max_dev]
-dQ = qizi_max_dev * (2*rand(1, Nsteps) - 1);  % [-qizi_max_dev, +qizi_max_dev]
+% Use the actual Nsteps (may have been truncated)
+if Nsteps > 0
+    dK = kla5_max_dev * (2*rand(1, Nsteps) - 1);  % [-kla5_max_dev, +kla5_max_dev]
+    dQ = qizi_max_dev * (2*rand(1, Nsteps) - 1);  % [-qizi_max_dev, +qizi_max_dev]
+    
+    % Calculate actual values for each step
+    valK_steps = kla5_ss * (1 + dK);   % KLa5 values for each step
+    valQ_steps = qizi_ss * (1 + dQ);   % QiZi values for each step
+    
+    % Build complete value arrays to match time_days structure
+    % time_days has: [0, step1_time, step2_time, ..., stepN_time, Tend_days] = Nsteps+2 elements
+    % valK/valQ need: [initial_val, step1_val, step2_val, ..., stepN_val, stepN_val] = Nsteps+2 elements
+    valK = [kla5_ss; valK_steps(:); valK_steps(end)];
+    valQ = [qizi_ss; valQ_steps(:); valQ_steps(end)];
+else
+    % No steps, just initial and final values (both at nominal)
+    valK = [kla5_ss; kla5_ss];
+    valQ = [qizi_ss; qizi_ss];
+end
 
-% Calculate actual values
-valK = kla5_ss * (1 + dK);   % KLa5 values for each step
-valQ = qizi_ss * (1 + dQ);   % QiZi values for each step
-
-% Add initial value at time 0 (nominal)
-valK = [kla5_ss; valK(:)];
-valQ = [qizi_ss; valQ(:)];
-
-% Duplicate last value at final time (ZOH hold)
-valK = [valK; valK(end)];
-valQ = [valQ; valQ(end)];
+% Ensure dimensions match
+assert(length(time_days) == length(valK), 'Dimension mismatch: time_days and valK must have same length');
+assert(length(time_days) == length(valQ), 'Dimension mismatch: time_days and valQ must have same length');
 
 %% --- Create Simulink Structures ---
 KLa5_step.time               = time_days;
