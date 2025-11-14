@@ -68,9 +68,28 @@ QiZi_step.time               = time_days;
 QiZi_step.signals.values     = valQ;
 QiZi_step.signals.dimensions = 1;
 
-%% --- Display Summary ---
-fprintf('Generated %d steps over %.1f days\n', Nsteps, Tend_days);
-fprintf('Time range: [%.2f, %.2f] days\n', min(time_days), max(time_days));
-fprintf('KLa5 range: [%.2f, %.2f]\n', min(valK), max(valK));
-fprintf('QiZi range: [%.0f, %.0f]\n', min(valQ), max(valQ));
+%% --- Plots ---
+% KLa5 step plot
+figure(21); clf
+stairs(KLa5_step.time, KLa5_step.signals.values, 'LineWidth', 1.2); grid on
+xlabel('Days'); ylabel('KLa5'); 
+title('KLa5 random steps (random durations)');
+xlim([0 Tend_days])
+
+% QiZi step plot
+figure(22); clf
+stairs(QiZi_step.time, QiZi_step.signals.values, 'LineWidth', 1.2); grid on
+xlabel('Days'); ylabel('QiZi'); 
+title('QiZi random steps (random durations)');
+xlim([0 Tend_days])
+
+% Duration bar plot (show actual durations used)
+if Nsteps > 0
+    % Calculate actual durations from time_days (excluding final time point)
+    actual_dur = diff(time_days(1:end-1));  % Differences between consecutive time points
+    figure(23); clf
+    bar(actual_dur); grid on
+    xlabel('Step #'); ylabel('Duration [days]');
+    title(sprintf('Random plateau durations (sum = %.3f d)', sum(actual_dur)));
+end
 
