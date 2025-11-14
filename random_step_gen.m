@@ -162,7 +162,19 @@ fprintf('\nIdentified State-Space Model:\n');
 fprintf('  Order: %d\n', size(sys_ss.A, 1));
 fprintf('  Inputs: %d (KLa5, Qint)\n', size(sys_ss.B, 2));
 fprintf('  Outputs: %d (SNO2, SO5)\n', size(sys_ss.C, 1));
-fprintf('  Fit to data: %.2f%%\n', sys_ss.Report.Fit.FitPercent(1));
+
+% Display fit percentages for each output
+% FitPercent is a vector: [fit_output1, fit_output2, ...]
+fprintf('  Fit to data:\n');
+fprintf('    Output 1 (SNO2): %.2f%%\n', sys_ss.Report.Fit.FitPercent(1));
+fprintf('    Output 2 (SO5):  %.2f%%\n', sys_ss.Report.Fit.FitPercent(2));
+fprintf('    Average fit:     %.2f%%\n', mean(sys_ss.Report.Fit.FitPercent));
+
+% Note: The fit percentage is calculated as:
+% Fit = 100 * (1 - norm(y_measured - y_predicted) / norm(y_measured - mean(y_measured)))
+% This measures how much better the model is compared to just using the mean value.
+% The compare() plot may show slightly different values due to different normalization
+% or calculation methods used in the visualization.
 
 %% --- Model Validation ---
 % Compare model output with measured data
