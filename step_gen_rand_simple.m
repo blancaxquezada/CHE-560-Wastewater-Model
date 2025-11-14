@@ -63,9 +63,10 @@ if Nsteps > 0
     
     % Build complete value arrays to match time_days structure
     % time_days has: [0, step1_time, step2_time, ..., stepN_time, Tend_days] = Nsteps+2 elements
-    % valK/valQ need: [initial_val, step1_val, step2_val, ..., stepN_val, stepN_val] = Nsteps+2 elements
-    valK = [kla5_ss; valK_steps(:); valK_steps(end)];
-    valQ = [qizi_ss; valQ_steps(:); valQ_steps(end)];
+    % valK/valQ need: [initial_val, step1_val, step2_val, ..., stepN_val, steady_state] = Nsteps+2 elements
+    % Final value returns to steady state at Tend_days
+    valK = [kla5_ss; valK_steps(:); kla5_ss];
+    valQ = [qizi_ss; valQ_steps(:); qizi_ss];
 else
     % No steps, just initial and final values (both at nominal)
     valK = [kla5_ss; kla5_ss];
