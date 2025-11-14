@@ -124,11 +124,72 @@ Qint_rand = [Qint_log.time, Qint_log.signals.values];
 SNO2_rand = [SNO2.time, SNO2.signals.values];
 
 %% --- Build Model ---
+% Extract sampling time (assuming uniform sampling)
 Ts = KLa5_rand(3,1) - KLa5_rand(2,1);
-u1 = KLa5_rand(2:end-1,2) - KLa5_rand(2,2);
-u2 = Qint_rand(2:end-1,2) - Qint_rand(2,2);
-y1 = SNO2_rand(2:end-1,2) - SNO2_rand(2,2);
-y2 = SO5_rand(2:end-1,2) - SO5_rand(2,2);
+
+% Compute deviations from initial steady-state (as instructed by professor)
+u1 = KLa5_rand(2:end-1,2) - KLa5_rand(2,2);  % KLa5 deviation
+u2 = Qint_rand(2:end-1,2) - Qint_rand(2,2);   % Qint deviation
+y1 = SNO2_rand(2:end-1,2) - SNO2_rand(2,2);   % SNO2 deviation
+y2 = SO5_rand(2:end-1,2) - SO5_rand(2,2);     % SO5 deviation
+
+% Combine inputs and outputs
+U = [u1, u2];  % Input matrix: [u1, u2] - 2 inputs
+Y = [y1, y2];  % Output matrix: [y1, y2] - 2 outputs
+
+% Create iddata object for System Identification Toolbox
+% Format: iddata(outputs, inputs, sampling_time)
+data = iddata(Y, U, Ts, 'TimeUnit', 'days');
+
+% Display data info
+fprintf('Data prepared:\n');
+fprintf('  Sampling time: %.6f days\n', Ts);
+fprintf('  Number of samples: %d\n', length(u1));
+fprintf('  Inputs: KLa5, Qint\n');
+fprintf('  Outputs: SNO2, SO5\n\n');
+
+%% --- State-Space Model Identification ---
+% Method 1: Using ssest() - State-space estimation (recommended)
+% This estimates a state-space model of specified order
+nx = 4;  % State order (number of states) - adjust as needed
+% Try different orders: 2, 3, 4, 5, 6, etc. to find best fit
+
+fprintf('Identifying state-space model with order = %d...\n', nx);
+sys_ss = ssest(data, nx, 'Ts', Ts);
+
+% Display model information
+fprintf('\nIdentified State-Space Model:\n');
+fprintf('  Order: %d\n', size(sys_ss.A, 1));
+fprintf('  Inputs: %d (KLa5, Qint)\n', size(sys_ss.B, 2));
+fprintf('  Outputs: %d (SNO2, SO5)\n', size(sys_ss.C, 1));
+fprintf('  Fit to data: %.2f%%\n', sys_ss.Report.Fit.FitPercent(1));
+
+%% --- Model Validation ---
+% Compare model output with measured data
+figure;
+compare(data, sys_ss);
+title('Model Validation: Measured vs. Model Output');
+
+% Plot step response
+figure;
+step(sys_ss);
+title('Step Response of Identified State-Space Model');
+grid on;
+
+% Display state-space matrices
+fprintf('\nState-Space Matrices:\n');
+fprintf('A matrix (state dynamics):\n');
+disp(sys_ss.A);
+fprintf('B matrix (input to state):\n');
+disp(sys_ss.B);
+fprintf('C matrix (state to output):\n');
+disp(sys_ss.C);
+fprintf('D matrix (direct feedthrough):\n');
+disp(sys_ss.D);
+
+% Save the model
+save('identified_ss_model.mat', 'sys_ss', 'data', 'Ts');
+fprintf('\nModel saved to: identified_ss_model.mat\n');
 
 
 
